@@ -12,7 +12,7 @@ const int blueLed   = 7;
 // Servo Movement Parameters
 const int OPEN_POS      = 0;
 const int CLOSED_POS    = 140;
-const int OPEN_SPEED    = 3;  // Faster speed for opening
+const int OPEN_SPEED    = 3; // Faster speed for opening
 const int CLOSE_SPEED   = 1;  // Slower speed for closing
 const unsigned long SERVO_STEP_DELAY = 15; // ms between servo updates
 
@@ -46,26 +46,32 @@ void setup() {
   digitalWrite(redLed, LOW);
   digitalWrite(greenLed, LOW);
   digitalWrite(blueLed, HIGH);
+  Serial.println("Smart Dustbin Initialized");
 }
 
 void loop() {
   unsigned long now = millis();
   int distance = getDistance();
+  Serial.print("Distance: ");
+  Serial.println(distance);
 
   switch (currentState) {
     case CLOSED:
+      Serial.println("State: CLOSED");
       digitalWrite(blueLed, HIGH);
-      smoothDimToBright(redLed, 2000); // Red LED dim-to-bright effect (2-second cycle)
+      smoothDimToBright(redLed, 2000);
       digitalWrite(greenLed, LOW);
       
       if (distance > 0 && distance <= 35) {
-        playOpeningTune();  // 🔊 Play soft music before opening
+        Serial.println("Object detected, opening bin...");
+        playOpeningTune();
         currentState = OPENING;
         myServo.attach(servoPin);
       }
       break;
 
     case OPENING:
+      Serial.println("State: OPENING");
       digitalWrite(blueLed, LOW);
       digitalWrite(redLed, LOW);
       if ((now / 100) % 2 == 0) {
@@ -77,18 +83,22 @@ void loop() {
         myServo.write(currentServoPos -= OPEN_SPEED);
         delay(SERVO_STEP_DELAY);
       } else {
+        Serial.println("Bin opened");
         currentState = OPEN;
         digitalWrite(greenLed, HIGH);
       }
       break;
 
     case OPEN:
-      delay(5000); // Lid stays open for 5 seconds
-      greenWarningWithBeep(); // Smooth, pleasant warning before closing
+      Serial.println("State: OPEN");
+      delay(5000);
+      Serial.println("Closing soon...");
+      greenWarningWithBeep();
       currentState = CLOSING;
       break;
 
     case CLOSING:
+      Serial.println("State: CLOSING");
       digitalWrite(greenLed, LOW);
       if ((now / 300) % 2 == 0) {
         digitalWrite(redLed, HIGH);
@@ -96,12 +106,14 @@ void loop() {
         digitalWrite(redLed, LOW);
       }
       if (distance > 0 && distance <= 20) {
+        Serial.println("Object detected, reopening bin...");
         currentState = OPENING;
       } else if (currentServoPos < CLOSED_POS) {
         myServo.write(currentServoPos += CLOSE_SPEED);
         delay(SERVO_STEP_DELAY);
       } else {
-        blinkAllLeds(2, 400); // Blink all LEDs twice for 0.4 seconds
+        Serial.println("Bin closed");
+        blinkAllLeds(2, 400);
         currentState = CLOSED;
         myServo.detach();
         digitalWrite(redLed, LOW);
@@ -114,12 +126,13 @@ void loop() {
 
 // 🎵 Function to Play Soft Music Before Opening
 void playOpeningTune() {
-  int melody[] = {262, 330, 392, 523};  // Soft tune (C4, E4, G4, C5)
-  int duration[] = {200, 200, 300, 400}; // Duration of each note in ms
+  Serial.println("Playing opening tune");
+  int melody[] = {262, 330, 392, 523};
+  int duration[] = {200, 200, 300, 400};
 
   for (int i = 0; i < 4; i++) {
     tone(buzzer, melody[i], duration[i]);
-    delay(duration[i] * 1.2); // Slight pause between notes
+    delay(duration[i] * 1.2);
   }
   noTone(buzzer);
 }
@@ -136,6 +149,7 @@ int getDistance() {
 
 // 🔔 Smooth Warning Before Closing
 void greenWarningWithBeep() {
+  Serial.println("Warning: Bin closing soon");
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 255; j += 25) {
       analogWrite(greenLed, j);
